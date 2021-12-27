@@ -2,6 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+''' 
+references: 
+https://towardsdatascience.com/how-scraping-nba-stats-is-cooler-than-michael-jordan-49d7562ce3ef
+https://medium.com/@osanchez2323/web-scraping-nba-stats-4b4f8c525994
+https://betterprogramming.pub/a-step-by-step-guide-to-web-scraping-nba-data-with-python-jupyter-beautifulsoup-and-pandas-7e2d334d4195
+https://stackoverflow.com/questions/5074803/retrieving-parameters-from-a-url
+'''
+
 class nba_stats(): 
     
     def __init__(self):
