@@ -6,6 +6,7 @@ import os
 import glob
 from pathlib import Path
 
+
 ''' 
 references: 
 https://towardsdatascience.com/how-scraping-nba-stats-is-cooler-than-michael-jordan-49d7562ce3ef
@@ -17,9 +18,21 @@ https://stackoverflow.com/questions/5074803/retrieving-parameters-from-a-url
 class nba_stats(): 
     
     def __init__(self):
+        self.path = str(Path(__file__).parent.resolve())
+        self.headerPath = self.path + '/header_params'
         self.fileList = []
         self.allHeadersParams = {}
-        
+        self.genMeasureTypes  = ['Base',
+                                'Advanced',
+                                'Misc',
+                                'Scoring',
+                                'Usage',
+                                'Opponent',
+                                'Defense',
+                                ]
+        self.genSeason = [
+            '2021-22', '2020-21', '2019-20'
+        ]
 
     def json_load(self,path):
         for filename in glob.glob(os.path.join(path, '*.json')):
@@ -30,81 +43,48 @@ class nba_stats():
                     self.fileList.append(self.filename) 
         return self.allHeadersParams
 
-
-# url = 'https://stats.nba.com/stats/leaguedashplayerstats?'
-# header = {
-# "Accept": "application/json, text/plain, */*",
-# "Accept-Encoding": "gzip, deflate, br",
-# "Accept-Language": "en-US,en;q=0.9",
-# "Cache-Control": "no-cache",
-# "Connection": "keep-alive",
-# "Host": "stats.nba.com",
-# "Origin": "https://www.nba.com",
-# "Pragma": "no-cache",
-# "Referer": "https://www.nba.com/",
-# "sec-ch-ua": "'Google Chrome';v='95', 'Chromium';v='95', ';Not A Brand';v='99'",
-# "sec-ch-ua-mobile": "?0",
-# "sec-ch-ua-platform": "Windows",
-# "Sec-Fetch-Dest": "empty",
-# "Sec-Fetch-Mode": "cors",
-# "Sec-Fetch-Site": "same-site",
-# "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36",
-# "x-nba-stats-origin": "stats",
-# "x-nba-stats-token": "true"}
+    def data_extract(self, dataType, measureType, fileName, season='2021-22'):
+        args = self.json_load(path=self.headerPath)
+        extDataType = args[dataType]
+        extDataType['params']['MeasureType'] = measureType
+        extDataType['params']['Season'] = season 
+        extDataTypeResp = requests.get(extDataType['url']['url'], headers=extDataType['header'], params=extDataType['params'], timeout=5)
+        if extDataTypeResp.status_code == 200:
+            pass 
+        else:
+            print('Request status code: {}'.format(extDataTypeResp.status_code))
+            exit()
+        response_json = extDataTypeResp.json()
+        dfStats = pd.DataFrame(response_json['resultSets'][0]['rowSet'])
+        dfStats.columns = response_json['resultSets'][0]['headers']
+        dfStats.to_csv(fileName + '.csv')
 
 
-# params =(
-# ("College", ""),
-# ("Conference", ""),
-# ("Country", ""),
-# ("DateFrom", ""),
-# ("DateTo", ""),
-# ("Division", ""),
-# ("DraftPick", ""),
-# ("DraftYear", ""),
-# ("GameScope", ""),
-# ("GameSegment", ""),
-# ("Height", ""),
-# ("LastNGames", "0"),
-# ("LeagueID", "00"),
-# ("Location", ""),
-# ("MeasureType", "Advanced"),
-# ("Month", "0"),
-# ("OpponentTeamID", "0"),
-# ("Outcome", ""),
-# ("PORound", "0"),
-# ("PaceAdjust", "N"),
-# ("PerMode", "PerGame"),
-# ("Period", "0"),
-# ("PlayerExperience", ""),
-# ("PlayerPosition", ""),
-# ("PlusMinus", "N"),
-# ("Rank", "N"),
-# ("Season", "2021-22"),
-# ("SeasonSegment", ""),
-# ("SeasonType", "Regular Season"),
-# ("ShotClockRange", ""),
-# ("StarterBench", "" ),
-# ("TeamID", "0"),
-# ("TwoWay", "0"),
-# ("VsConference", ""),
-# ("VsDivision", ""),
-# ("Weight", ""))
+    # def extract_all(self):
 
-# response = requests.get(url, headers=header, params = params)
-# response_json = response.json()
-# frame = pd.DataFrame(response_json['resultSets'][0]['rowSet'])
-# frame.columns = response_json['resultSets'][0]['headers']
-# print(frame)
 
 if __name__ == '__main__':
-    path = r'C:\Users\justinkim2\Documents\GitHub\nba_advanced_stats_scrape\header_params'
+    # path = str(Path(__file__).parent.resolve())
+    # headerPath = path + '/header_params'
     ns = nba_stats()
-    jsonDict = ns.json_load(path=path)
-    genStats = jsonDict['general_stats'] 
-    response = requests.get(genStats['url']['url'], headers=genStats['header'], params=genStats['params'])
-    response_json = response.json()
-    frame = pd.DataFrame(response_json['resultSets'][0]['rowSet'])
-    frame.columns = response_json['resultSets'][0]['headers']
-    print(frame)
-    # print(str(genStats['url']['url']) + '/n' + str(genStats['header']))
+    # jsonDict = ns.json_load(path=headerPath)
+    ns.data_extract(dataType='general_stats', measureType='Base', fileName='gen_Traditional', season='2020-21')
+    '''
+    Instead of assigning variables to be a dataframe,
+        loop through and add dataframes to a list or dictionary
+    '''
+    # genStats = jsonDict['general_stats'] 
+    # genStatsResponse = requests.get(genStats['url']['url'], headers=genStats['header'], params=genStats['params'], timeout=5)
+    # # response_json = genStatsResponse.json()
+    # # print(response_json)
+    # genStatsFrame = pd.DataFrame(genStatsResponse.json()['resultSets'][0]['rowSet'])
+    # genStatsFrame.columns = genStatsResponse.json()['resultSets'][0]['headers']
+    # print(genStatsFrame)
+    # # genStatsFrame.to_csv('stats_test.csv')
+
+    '''
+    Testing something
+    # req = requests.get('https://stats.nba.com/stats/leaguedashplayerstats', headers=genStats['header'], params=genStats['params'], timeout=5)
+    # print(dir(req))
+    # print(vars(req).keys())
+    '''
