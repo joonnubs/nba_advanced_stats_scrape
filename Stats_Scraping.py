@@ -5,7 +5,8 @@ import json
 import os
 import glob
 from pathlib import Path
-
+from datetime import datetime 
+from dateutil.relativedelta import relativedelta
 
 ''' 
 references: 
@@ -22,6 +23,7 @@ class nba_stats():
         self.headerPath = self.path + '/header_params'
         self.fileList = []
         self.allHeadersParams = {}
+
         self.genMeasureTypes  = ['Base',
                                 'Advanced',
                                 'Misc',
@@ -30,9 +32,34 @@ class nba_stats():
                                 'Opponent',
                                 'Defense',
                                 ]
-        self.genSeason = [
-            '2021-22', '2020-21', '2019-20'
-        ]
+        
+        self.clutchMeasureTypes = ['Base',
+                                'Advanced',
+                                'Misc',
+                                'Scoring',
+                                'Usage']
+
+        '''
+        Play Types and their Measure Types are named Play Type, but we name it measure type for consistency
+        Play Types also include offensive and defensive parameters which should be differentiated
+        '''
+        self.playtypeMeasureTypes = ['Transition',
+                                    'Isolation',
+                                    'PRBallHandler',
+                                    'PRRollman',
+                                    'Postup',
+                                    'Spotup',
+                                    'Handoff',
+                                    '']
+        self.playtypeGrouping = ['offensive',
+                                'defensive']
+        
+
+        self.oldestSeason = {
+            'general_stats': 1996,
+            'cluth_stats' : 1996
+        }
+        
 
     def json_load(self,path):
         for filename in glob.glob(os.path.join(path, '*.json')):
@@ -43,12 +70,27 @@ class nba_stats():
                     self.fileList.append(self.filename) 
         return self.allHeadersParams
 
-    def data_extract(self, dataType, measureType, fileName, season='2021-22'):
+    def generate_all_seasons(self, dataType):
+        currentDate = datetime.now()
+        self.season = []
+        while not currentDate.year == self.oldestSeason[dataType]:
+            self.season.append(str(currentDate.year - 1) + '-' + (currentDate.strftime('%y')))
+            currentDate -= relativedelta(years=1)
+
+    def data_extract(self, dataType, measureType='all', season='2021-22'):
         args = self.json_load(path=self.headerPath)
         extDataType = args[dataType]
-        extDataType['params']['MeasureType'] = measureType
-        extDataType['params']['Season'] = season 
-        extDataTypeResp = requests.get(extDataType['url']['url'], headers=extDataType['header'], params=extDataType['params'], timeout=5)
+
+        if (dataType=='general') & (measureType=='EstAdv'):
+            extDataType = args['gen_Est_Adv']
+            extDataType['params']['Season'] = season 
+        else:
+            extDataType['params']['Measure '] = measureType
+            extDataType['params']['Season'] = season  
+
+        # extDataType['params']['MeasureType'] = measureType
+        # extDataType['params']['Season'] = season 
+        extDataTypeResp = requests.get(extDataType['url']['url'], headers=args['header']['header'], params=extDataType['params'], timeout=5)
         if extDataTypeResp.status_code == 200:
             pass 
         else:
@@ -57,7 +99,7 @@ class nba_stats():
         response_json = extDataTypeResp.json()
         dfStats = pd.DataFrame(response_json['resultSets'][0]['rowSet'])
         dfStats.columns = response_json['resultSets'][0]['headers']
-        dfStats.to_csv(fileName + '.csv')
+        dfStats.to_csv(str(dataType) + '_' + str(measureType) + '_' + str(season) + '.csv')
 
 
     # def extract_all(self):
@@ -68,7 +110,8 @@ if __name__ == '__main__':
     # headerPath = path + '/header_params'
     ns = nba_stats()
     # jsonDict = ns.json_load(path=headerPath)
-    ns.data_extract(dataType='general_stats', measureType='Base', fileName='gen_Traditional', season='2020-21')
+    # ns.data_extract(dataType='general', measureType='Base', season='2020-21')
+    ns.data_extract(dataType='general', measureType='EstAdv', season='2020-21')
     '''
     Instead of assigning variables to be a dataframe,
         loop through and add dataframes to a list or dictionary
